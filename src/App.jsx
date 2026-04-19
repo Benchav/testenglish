@@ -19,6 +19,35 @@ const db = getFirestore(app);
 
 const optionLetters = ['A', 'B', 'C', 'D'];
 
+const EdTechButton = ({ onClick, children, disabled, className = '', ghost = false }) => {
+    let baseClass = "px-8 py-3.5 rounded-full font-bold tracking-wide transition-all duration-300 transform active:scale-95 outline-none flex justify-center items-center ";
+
+    if (disabled) {
+        baseClass += "bg-gray-200 text-gray-400 cursor-not-allowed ";
+    } else if (ghost) {
+        baseClass += "bg-white text-blue-600 border-2 border-blue-100 hover:bg-blue-50 shadow-sm ";
+    } else {
+        baseClass += "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 ";
+    }
+
+    return (
+        <button onClick={onClick} disabled={disabled} className={`${baseClass} ${className}`}>
+            {children}
+        </button>
+    );
+};
+
+const EdTechInput = ({ type, placeholder, value, onChange, required }) => (
+    <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required={required}
+        className="w-full bg-[#f8fafc] text-[#1e293b] border border-[#e2e8f0] rounded-2xl px-5 py-4 font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all outline-none placeholder-[#64748b]"
+    />
+);
+
 export default function App() {
     const [user, setUser] = useState(null);
     const [userRole, setUserRole] = useState(null); // 'estudiante' | 'docente'
@@ -192,36 +221,6 @@ export default function App() {
             }
         }
     };
-
-    // --- EDTECH UI COMPONENTS ---
-    const EdTechButton = ({ onClick, children, disabled, className = '', ghost = false }) => {
-        let baseClass = "px-8 py-3.5 rounded-full font-bold tracking-wide transition-all duration-300 transform active:scale-95 outline-none flex justify-center items-center ";
-        
-        if (disabled) {
-            baseClass += "bg-gray-200 text-gray-400 cursor-not-allowed ";
-        } else if (ghost) {
-            baseClass += "bg-white text-blue-600 border-2 border-blue-100 hover:bg-blue-50 shadow-sm ";
-        } else {
-            baseClass += "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 ";
-        }
-        
-        return (
-            <button onClick={onClick} disabled={disabled} className={`${baseClass} ${className}`}>
-                {children}
-            </button>
-        );
-    };
-
-    const EdTechInput = ({ type, placeholder, value, onChange, required }) => (
-        <input 
-            type={type} 
-            placeholder={placeholder} 
-            value={value} 
-            onChange={onChange} 
-            required={required}
-            className="w-full bg-[#f8fafc] text-[#1e293b] border border-[#e2e8f0] rounded-2xl px-5 py-4 font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all outline-none placeholder-[#64748b]"
-        />
-    );
 
     // --- RENDERIZADO PRINCIPAL ---
     if (!authLoaded) return <div className="flex justify-center items-center h-screen bg-[#f4f7fe] text-[#64748b] font-medium animate-pulse">Initializing Platform...</div>;
