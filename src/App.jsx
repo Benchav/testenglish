@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -19,7 +19,7 @@ const db = getFirestore(app);
 
 const optionLetters = ['A', 'B', 'C', 'D'];
 
-const EdTechButton = ({ onClick, children, disabled, className = '', ghost = false }) => {
+const EdTechButton = memo(function EdTechButton({ onClick, children, disabled, className = '', ghost = false }) {
     let baseClass = "px-8 py-3.5 rounded-full font-bold tracking-wide transition-all duration-300 transform active:scale-95 outline-none flex justify-center items-center ";
 
     if (disabled) {
@@ -35,9 +35,10 @@ const EdTechButton = ({ onClick, children, disabled, className = '', ghost = fal
             {children}
         </button>
     );
-};
+});
 
-const EdTechInput = ({ type, placeholder, value, onChange, required }) => (
+const EdTechInput = memo(function EdTechInput({ type, placeholder, value, onChange, required }) {
+    return (
     <input
         type={type}
         placeholder={placeholder}
@@ -46,7 +47,8 @@ const EdTechInput = ({ type, placeholder, value, onChange, required }) => (
         required={required}
         className="w-full bg-[#f8fafc] text-[#1e293b] border border-[#e2e8f0] rounded-2xl px-5 py-4 font-medium focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all outline-none placeholder-[#64748b]"
     />
-);
+    );
+});
 
 export default function App() {
     const [user, setUser] = useState(null);
@@ -76,6 +78,15 @@ export default function App() {
     // Dashboard
     const [resultsData, setResultsData] = useState([]);
     const [errorMsg, setErrorMsg] = useState('');
+
+    const handleNameChange = useCallback((e) => setNameStr(e.target.value), []);
+    const handleEmailChange = useCallback((e) => setEmailStr(e.target.value), []);
+    const handlePasswordChange = useCallback((e) => setPassStr(e.target.value), []);
+    const handleToggleRegister = useCallback((e) => {
+        e.preventDefault();
+        setIsRegistering(prev => !prev);
+        setErrorMsg('');
+    }, []);
 
     // --- EFECTOS ---
     useEffect(() => {
@@ -297,19 +308,19 @@ export default function App() {
                                 {isRegistering && (
                                     <div className="space-y-1.5">
                                         <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-                                        <EdTechInput type="text" placeholder="e.g. John Doe" value={nameStr} onChange={(e) => setNameStr(e.target.value)} required />
+                                        <EdTechInput type="text" placeholder="e.g. John Doe" value={nameStr} onChange={handleNameChange} required />
                                     </div>
                                 )}
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
-                                    <EdTechInput type="email" placeholder="student@university.edu" value={emailStr} onChange={(e) => setEmailStr(e.target.value)} required />
+                                    <EdTechInput type="email" placeholder="student@university.edu" value={emailStr} onChange={handleEmailChange} required />
                                 </div>
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between items-center ml-1">
                                         <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">Password</label>
                                         {!isRegistering && <span className="text-[11px] font-extrabold text-blue-600 hover:text-blue-800 cursor-pointer">Forgot?</span>}
                                     </div>
-                                    <EdTechInput type="password" placeholder="••••••••" value={passStr} onChange={(e) => setPassStr(e.target.value)} required />
+                                    <EdTechInput type="password" placeholder="••••••••" value={passStr} onChange={handlePasswordChange} required />
                                 </div>
 
                                 {errorMsg && (
@@ -329,7 +340,7 @@ export default function App() {
                             <div className="mt-8 text-center md:text-left">
                                 <p className="text-slate-500 text-[14px] font-medium">
                                     {isRegistering ? 'Already enrolled? ' : 'New to the platform? '}
-                                    <button onClick={(e) => { e.preventDefault(); setIsRegistering(!isRegistering); setErrorMsg(''); }} className="text-blue-600 font-extrabold hover:text-blue-800 transition-colors">
+                                    <button onClick={handleToggleRegister} className="text-blue-600 font-extrabold hover:text-blue-800 transition-colors">
                                         {isRegistering ? 'Sign In Demo' : 'Create Student ID'}
                                     </button>
                                 </p>
