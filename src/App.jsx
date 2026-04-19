@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, doc, setDoc, getDoc, onSnapshot, query, orderBy, getDocsFromServer } from 'firebase/firestore';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -19,6 +19,7 @@ const db = getFirestore(app);
 
 const optionLetters = ['A', 'B', 'C', 'D'];
 const EXAM_NAME = 'English Grammar Exam';
+const QUIZ_PROGRESS_STORAGE_PREFIX = 'english-grammar-exam-progress-v1';
 
 const EdTechButton = memo(function EdTechButton({ onClick, children, disabled, className = '', ghost = false }) {
     let baseClass = "px-8 py-3.5 rounded-full font-bold tracking-wide transition-all duration-300 transform active:scale-95 outline-none flex justify-center items-center ";
@@ -79,6 +80,10 @@ export default function App() {
     // Dashboard
     const [resultsData, setResultsData] = useState([]);
     const [errorMsg, setErrorMsg] = useState('');
+    const [isRefreshingResults, setIsRefreshingResults] = useState(false);
+    const [dashboardStatus, setDashboardStatus] = useState('');
+    const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false);
+    const [restoreNotice, setRestoreNotice] = useState('');
 
     const handleNameChange = useCallback((e) => setNameStr(e.target.value), []);
     const handleEmailChange = useCallback((e) => setEmailStr(e.target.value), []);
@@ -89,7 +94,50 @@ export default function App() {
         setErrorMsg('');
     }, []);
 
+    const fetchTeacherResultsFromServer = useCallback(async () => {
+        const rRef = query(collection(db, 'calificaciones'), orderBy('timestamp', 'desc'));
+        const snapshot = await getDocsFromServer(rRef);
+        const data = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+        setResultsData(data);
+        return data.length;
+    }, []);
+
+    const getQuizStorageKey = useCallback((uid) => `${QUIZ_PROGRESS_STORAGE_PREFIX}:${uid}`, []);
+
+    const clearQuizProgress = useCallback((uid) => {
+        if (!uid) return;
+        try {
+            localStorage.removeItem(getQuizStorageKey(uid));
+        } catch {
+            // Ignore storage cleanup errors.
+        }
+    }, [getQuizStorageKey]);
+
+    const loadQuizProgress = useCallback((uid) => {
+        if (!uid) return null;
+        try {
+            const raw = localStorage.getItem(getQuizStorageKey(uid));
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch {
+            return null;
+        }
+    }, [getQuizStorageKey]);
+
+    const saveQuizProgress = useCallback((uid, progress) => {
+        if (!uid) return;
+        try {
+            localStorage.setItem(getQuizStorageKey(uid), JSON.stringify(progress));
+        } catch {
+            // Ignore storage quota errors.
+        }
+    }, [getQuizStorageKey]);
+
     // --- EFECTOS ---
+    useEffect(() => {
+        setHasAttemptedRestore(false);
+    }, [user?.uid]);
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
@@ -128,7 +176,7 @@ export default function App() {
     useEffect(() => {
         if (!user || !userRole) return;
         
-        if (userRole === 'estudiante') {
+        if (userRole === 'estudiante' && view !== 'quiz') {
             const qRef = collection(db, 'preguntas');
             const unsub = onSnapshot(qRef, (snapshot) => {
                 const loaded = snapshot.docs.map(doc => {
@@ -153,10 +201,75 @@ export default function App() {
             const unsub = onSnapshot(rRef, (snapshot) => {
                 const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setResultsData(data);
+                setDashboardStatus(`Live sync active. Last update: ${new Date().toLocaleString()}`);
             });
             return () => unsub();
         }
     }, [user, userRole, view]);
+
+    useEffect(() => {
+        if (!user || userRole !== 'estudiante' || hasAttemptedRestore) return;
+        setHasAttemptedRestore(true);
+
+        const saved = loadQuizProgress(user.uid);
+        if (!saved) return;
+
+        const hasQuestions = Array.isArray(saved.questions) && saved.questions.length > 0;
+        const hasAnswers = Array.isArray(saved.answers);
+
+        if (!hasQuestions || !hasAnswers) {
+            clearQuizProgress(user.uid);
+            return;
+        }
+
+        const safeCurrentIndex = Math.min(
+            Math.max(Number(saved.currentQuestionIndex) || 0, 0),
+            saved.questions.length - 1
+        );
+
+        setQuestions(saved.questions);
+        setAnswers(saved.answers);
+        setCurrentQuestionIndex(safeCurrentIndex);
+        setIsAnswered(Boolean(saved.isAnswered));
+        setShowHint(Boolean(saved.showHint));
+        setCorrectCount(Number(saved.correctCount) || 0);
+        setIncorrectCount(Number(saved.incorrectCount) || 0);
+        setRestoreNotice('Your previous progress was restored from this device.');
+        setView('quiz');
+    }, [user, userRole, hasAttemptedRestore, loadQuizProgress, clearQuizProgress]);
+
+    useEffect(() => {
+        if (!restoreNotice) return;
+        const timer = setTimeout(() => setRestoreNotice(''), 6000);
+        return () => clearTimeout(timer);
+    }, [restoreNotice]);
+
+    useEffect(() => {
+        if (!user || userRole !== 'estudiante' || view !== 'quiz' || questions.length === 0) return;
+
+        saveQuizProgress(user.uid, {
+            questions,
+            answers,
+            currentQuestionIndex,
+            isAnswered,
+            showHint,
+            correctCount,
+            incorrectCount,
+            updatedAt: new Date().toISOString(),
+        });
+    }, [
+        user,
+        userRole,
+        view,
+        questions,
+        answers,
+        currentQuestionIndex,
+        isAnswered,
+        showHint,
+        correctCount,
+        incorrectCount,
+        saveQuizProgress,
+    ]);
 
     // --- MANEJADORES ---
     const handleAuth = async (e) => {
@@ -183,11 +296,26 @@ export default function App() {
 
     const handleLogout = () => signOut(auth);
 
+    const handleRefreshResults = useCallback(async () => {
+        setIsRefreshingResults(true);
+        try {
+            const total = await fetchTeacherResultsFromServer();
+            setDashboardStatus(`Refreshed from Firebase server at ${new Date().toLocaleString()} (${total} records).`);
+        } catch (err) {
+            console.error('Error refreshing teacher results:', err);
+            setDashboardStatus('Could not refresh from server. Live sync is still active.');
+        } finally {
+            setIsRefreshingResults(false);
+        }
+    }, [fetchTeacherResultsFromServer]);
+
     const handleStartQuiz = () => {
         if(questions.length === 0) {
             setErrorMsg('Questions are still syncing. Please try again in a few seconds.');
             return;
         }
+        clearQuizProgress(user?.uid);
+        setRestoreNotice('');
         setErrorMsg('');
         setAnswers(Array(questions.length).fill(null));
         setCurrentQuestionIndex(0);
@@ -229,6 +357,8 @@ export default function App() {
                     answers: answers,
                     timestamp: new Date().toISOString(),
                 });
+                clearQuizProgress(user.uid);
+                setRestoreNotice('');
                 setView('result');
             } catch (err) {
                 console.error("Error saving:", err);
@@ -377,6 +507,21 @@ export default function App() {
                 {/* --- MÓDULO EXAMEN --- */}
                 {view === 'quiz' && questions.length > 0 && (
                     <div className="w-full max-w-3xl -mt-14">
+                        {restoreNotice && (
+                            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 flex items-center justify-between gap-4">
+                                <span>{restoreNotice}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setRestoreNotice('')}
+                                    className="text-emerald-700/80 hover:text-emerald-900 transition-colors"
+                                    aria-label="Dismiss restored progress notice"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
                         <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.06)] p-6 md:p-10 mb-8 border border-slate-100">
                             
                             {/* Header de Pregunta Círculos */}
@@ -508,7 +653,17 @@ export default function App() {
 
                         {/* LISTA DE ESTUDIANTES */}
                         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden pt-6">
-                            <h3 className="px-8 font-extrabold text-[#1e293b] text-xl mb-4">Teacher Results Overview</h3>
+                            <div className="px-8 mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <h3 className="font-extrabold text-[#1e293b] text-xl">Teacher Results Overview</h3>
+                                <button
+                                    onClick={handleRefreshResults}
+                                    disabled={isRefreshingResults}
+                                    className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all border ${isRefreshingResults ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
+                                >
+                                    {isRefreshingResults ? 'Refreshing...' : 'Refresh Results'}
+                                </button>
+                            </div>
+                            <p className="px-8 text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">{dashboardStatus || 'Live sync active. Waiting for updates...'}</p>
                             
                             {resultsData.length === 0 ? (
                                 <div className="text-center py-20 bg-slate-50 mx-4 mb-4 rounded-3xl border border-slate-100">
