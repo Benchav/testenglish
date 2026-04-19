@@ -111,7 +111,7 @@ export default function App() {
                         setView('start');
                     }
                 } catch(e) {
-                    console.error("Error al leer rol:", e);
+                    console.error("Error reading user role:", e);
                     setUserRole('estudiante');
                     setView('start');
                 }
@@ -163,7 +163,7 @@ export default function App() {
         setErrorMsg('');
         try {
             if (isRegistering) {
-                if(!nameStr.trim()) return setErrorMsg('Por favor ingresa tu nombre');
+                if(!nameStr.trim()) return setErrorMsg('Please enter your name.');
                 const cred = await createUserWithEmailAndPassword(auth, emailStr, passStr);
                 await setDoc(doc(db, "usuarios", cred.user.uid), {
                     email: emailStr,
@@ -176,7 +176,7 @@ export default function App() {
             }
         } catch (error) {
             console.error(error);
-            setErrorMsg('Error de credenciales. Verifica tus datos.');
+            setErrorMsg('Invalid credentials. Please check your email and password.');
         }
     };
 
@@ -184,7 +184,7 @@ export default function App() {
 
     const handleStartQuiz = () => {
         if(questions.length === 0) {
-            setErrorMsg('Sincronizando preguntas con la nube... presiona de nuevo en unos segundos.');
+            setErrorMsg('Questions are still syncing. Please try again in a few seconds.');
             return;
         }
         setErrorMsg('');
@@ -228,13 +228,13 @@ export default function App() {
                 setView('result');
             } catch (err) {
                 console.error("Error saving:", err);
-                setErrorMsg('Error de conexión al guardar.');
+                setErrorMsg('Connection error while saving your score.');
             }
         }
     };
 
     // --- RENDERIZADO PRINCIPAL ---
-    if (!authLoaded) return <div className="flex justify-center items-center h-screen bg-[#f4f7fe] text-[#64748b] font-medium animate-pulse">Initializing Platform...</div>;
+    if (!authLoaded) return <div className="flex justify-center items-center h-screen bg-[#f4f7fe] text-[#64748b] font-medium animate-pulse">Loading Teacher Elimar Roa English Exam...</div>;
 
     // Métricas totales globales (Para Panel Docente)
     const totalAttempted = resultsData.length;
@@ -259,7 +259,7 @@ export default function App() {
                             <div className="text-white">
                                 <h1 className="text-2xl font-bold tracking-tight">Hi, {nameStr || user.email.split('@')[0]}</h1>
                                 <p className="text-blue-100 font-medium opacity-90">
-                                    {userRole === 'docente' ? 'Performance Dashboard' : 'Student Panel'}
+                                    {userRole === 'docente' ? 'Teacher Results Panel' : 'English Exam Home'}
                                 </p>
                             </div>
                         </div>
@@ -284,10 +284,10 @@ export default function App() {
                             <div className="absolute -top-20 -left-20 w-64 h-64 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
                             <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-blue-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
                             
-                            <img src="/edtech-bg.png" alt="Platform" className="w-[85%] h-auto object-contain drop-shadow-2xl z-10 mb-10 transform hover:scale-105 transition-transform duration-700 ease-out" onError={(e) => e.target.style.display = 'none'} />
+                            <img src="/edtech-bg.png" alt="English exam" className="w-[85%] h-auto object-contain drop-shadow-2xl z-10 mb-10 transform hover:scale-105 transition-transform duration-700 ease-out" onError={(e) => e.target.style.display = 'none'} />
                             
-                            <h2 className="text-white text-3xl font-black tracking-tight leading-tight z-10">Advanced Student Evaluation Platform</h2>
-                            <p className="text-blue-100 mt-5 text-[15px] font-medium z-10 max-w-[250px]">Secure, intelligent, and designed to propel your academic metrics forward.</p>
+                            <h2 className="text-white text-3xl font-black tracking-tight leading-tight z-10">English Grammar Exam</h2>
+                            <p className="text-blue-100 mt-5 text-[15px] font-medium z-10 max-w-[250px]">Official exam by Teacher Elimar Roa. Read each question carefully and choose the best answer.</p>
                         </div>
 
                         {/* Lado Formulario (Panel Derecho) */}
@@ -297,10 +297,10 @@ export default function App() {
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                 </div>
                                 <h3 className="text-3xl font-extrabold text-[#1e293b] tracking-tight">
-                                    {isRegistering ? 'Create Account' : 'Welcome Back'}
+                                    {isRegistering ? 'Create Student Account' : 'Welcome to the Exam'}
                                 </h3>
                                 <p className="text-slate-500 mt-2.5 text-[15px] font-medium">
-                                    {isRegistering ? 'Enter your details to track your exams.' : 'Enter your credentials to access your dashboard.'}
+                                    {isRegistering ? 'Create your account to take Teacher Elimar Roa\'s exam.' : 'Sign in to continue your English exam.'}
                                 </p>
                             </div>
 
@@ -313,7 +313,7 @@ export default function App() {
                                 )}
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
-                                    <EdTechInput type="email" placeholder="student@university.edu" value={emailStr} onChange={handleEmailChange} required />
+                                    <EdTechInput type="email" placeholder="studentname@gmail.com" value={emailStr} onChange={handleEmailChange} required />
                                 </div>
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between items-center ml-1">
@@ -332,16 +332,16 @@ export default function App() {
 
                                 <div className="pt-4">
                                     <EdTechButton className="w-full py-[1.15rem] text-[16px] shadow-blue-500/25">
-                                        {isRegistering ? 'Sign Up to Platform' : 'Secure Login'}
+                                        {isRegistering ? 'Create Account' : 'Sign In'}
                                     </EdTechButton>
                                 </div>
                             </form>
 
                             <div className="mt-8 text-center md:text-left">
                                 <p className="text-slate-500 text-[14px] font-medium">
-                                    {isRegistering ? 'Already enrolled? ' : 'New to the platform? '}
+                                    {isRegistering ? 'Already registered? ' : 'Need an account for this exam? '}
                                     <button onClick={handleToggleRegister} className="text-blue-600 font-extrabold hover:text-blue-800 transition-colors">
-                                        {isRegistering ? 'Sign In Demo' : 'Create Student ID'}
+                                        {isRegistering ? 'Sign In' : 'Create Account'}
                                     </button>
                                 </p>
                             </div>
@@ -353,18 +353,18 @@ export default function App() {
                 {view === 'start' && userRole === 'estudiante' && (
                     <div className="w-full bg-white p-8 md:p-12 rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.06)] -mt-16 text-center">
                         <div className="bg-blue-50/50 rounded-3xl p-8 mb-8 inline-block">
-                            <img src="/edtech-bg.png" alt="Test preparation" className="h-48 mx-auto hover:scale-105 transition-transform" />
+                            <img src="/edtech-bg.png" alt="English exam preparation" className="h-48 mx-auto hover:scale-105 transition-transform" />
                         </div>
-                        <h2 className="text-3xl font-extrabold text-[#1e293b] mb-4">Are you ready for the Exam?</h2>
+                        <h2 className="text-3xl font-extrabold text-[#1e293b] mb-4">Are you ready for Teacher Elimar Roa's English Exam?</h2>
                         <p className="text-[#64748b] text-[17px] mb-10 max-w-md mx-auto font-medium">
-                            Test rules: 30 Questions. Objective tracking. High accuracy ensures better performance profiles.
+                            This exam has 30 questions. Choose one answer per question. Your score will be saved at the end.
                         </p>
                         
                         {errorMsg && <p className="text-red-500 mb-6 font-bold bg-red-50 py-3 rounded-xl max-w-sm mx-auto">{errorMsg}</p>}
                         
                         <div className="flex justify-center">
                             <EdTechButton onClick={handleStartQuiz} className="text-lg w-full max-w-[300px]">
-                                Start Test
+                                Start Exam
                             </EdTechButton>
                         </div>
                     </div>
@@ -470,7 +470,7 @@ export default function App() {
                         </div>
 
                         <EdTechButton onClick={() => setView('start')} ghost className="w-full text-lg">
-                            Go to Dashboard
+                            Back to Exam Home
                         </EdTechButton>
                     </div>
                 )}
@@ -504,7 +504,7 @@ export default function App() {
 
                         {/* LISTA DE ESTUDIANTES */}
                         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden pt-6">
-                            <h3 className="px-8 font-extrabold text-[#1e293b] text-xl mb-4">Performance Overtime</h3>
+                            <h3 className="px-8 font-extrabold text-[#1e293b] text-xl mb-4">Teacher Results Overview</h3>
                             
                             {resultsData.length === 0 ? (
                                 <div className="text-center py-20 bg-slate-50 mx-4 mb-4 rounded-3xl border border-slate-100">
@@ -513,7 +513,7 @@ export default function App() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                         </svg>
                                     </div>
-                                    <p className="text-slate-500 font-bold">No student tests completed yet.</p>
+                                    <p className="text-slate-500 font-bold">No exam submissions yet.</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-slate-100">
