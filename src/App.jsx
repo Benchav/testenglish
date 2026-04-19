@@ -18,6 +18,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const optionLetters = ['A', 'B', 'C', 'D'];
+const EXAM_NAME = 'English Grammar Exam';
 
 const EdTechButton = memo(function EdTechButton({ onClick, children, disabled, className = '', ghost = false }) {
     let baseClass = "px-8 py-3.5 rounded-full font-bold tracking-wide transition-all duration-300 transform active:scale-95 outline-none flex justify-center items-center ";
@@ -220,8 +221,11 @@ export default function App() {
                 await addDoc(resultsRef, {
                     uid: user.uid,
                     studentName: nameStr || user.email,
+                    examName: EXAM_NAME,
                     score: correctCount,
                     total: questions.length,
+                    incorrectAnswers: incorrectCount,
+                    finalPercentage: Number(((correctCount / questions.length) * 100).toFixed(0)),
                     answers: answers,
                     timestamp: new Date().toISOString(),
                 });
@@ -518,21 +522,34 @@ export default function App() {
                             ) : (
                                 <div className="divide-y divide-slate-100">
                                     {resultsData.map((res) => {
-                                        const percentage = (res.score / res.total) * 100;
+                                        const studentName = res.studentName || 'Unknown Student';
+                                        const totalQuestions = Number(res.total) || 0;
+                                        const score = Number(res.score) || 0;
+                                        const percentage = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0;
+                                        const mistakes = typeof res.incorrectAnswers === 'number' ? res.incorrectAnswers : Math.max(totalQuestions - score, 0);
+                                        const examName = res.examName || EXAM_NAME;
+                                        const completedAt = res.timestamp ? new Date(res.timestamp) : null;
                                         return (
-                                            <div key={res.id} className="p-6 md:px-8 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center justify-between">
+                                            <div key={res.id} className="p-6 md:px-8 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                 
-                                                <div className="flex items-center mb-4 md:mb-0">
+                                                <div className="flex items-center mb-2 md:mb-0">
                                                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg mr-4">
-                                                        {res.studentName.charAt(0).toUpperCase()}
+                                                        {studentName.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-extrabold text-[#1e293b] text-lg">{res.studentName}</h4>
-                                                        <p className="text-slate-400 text-sm font-bold">{new Date(res.timestamp).toLocaleDateString()} at {new Date(res.timestamp).toLocaleTimeString()}</p>
+                                                        <h4 className="font-extrabold text-[#1e293b] text-lg">{studentName}</h4>
+                                                        <p className="text-slate-400 text-sm font-bold">
+                                                            {completedAt ? `${completedAt.toLocaleDateString()} ${completedAt.toLocaleTimeString()}` : 'No completion date'}
+                                                        </p>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-col items-end">
+                                                <div className="flex flex-col items-start md:items-end w-full md:w-auto">
+                                                    <div className="flex flex-wrap md:justify-end gap-2 mb-3">
+                                                        <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Test: {examName}</span>
+                                                        <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">Final Score: {score}/{totalQuestions}</span>
+                                                        <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-100">Mistakes: {mistakes}</span>
+                                                    </div>
                                                     <div className="flex items-center space-x-3 mb-2">
                                                         <span className="font-black text-2xl text-[#1e293b]">{percentage.toFixed(0)}<span className="text-lg text-slate-400">%</span></span>
                                                     </div>
