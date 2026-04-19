@@ -264,42 +264,76 @@ export default function App() {
 
             <div className="max-w-5xl mx-auto px-4 w-full relative z-10 flex flex-col items-center">
                 
-                {/* --- MÓDULO AUTH --- */}
+                {/* --- MÓDULO AUTH (SaaS Premium Split Layout) --- */}
                 {view === 'auth' && (
-                    <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(37,99,235,0.15)] w-full max-w-sm sm:max-w-md overflow-hidden mt-8 md:mt-20 transform transition-all">
-                        {/* Area de Ilustración Superior */}
-                        <div className="bg-gradient-to-b from-blue-50 to-white pt-8 pb-4 flex justify-center">
-                            <img src="/edtech-bg.png" alt="EdTech Illustration" className="h-40 object-contain drop-shadow-xl" onError={(e) => e.target.style.display = 'none'} />
+                    <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_-12px_rgba(37,99,235,0.15)] w-full max-w-4xl flex overflow-hidden mt-8 md:mt-16 transform transition-all border border-slate-100">
+                        
+                        {/* Lado Gráfico (Panel Izquierdo - Oculto en móvil) */}
+                        <div className="hidden md:flex w-[45%] bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 p-12 flex-col justify-center items-center relative overflow-hidden text-center">
+                            {/* Decorative blur elements para SaaS look */}
+                            <div className="absolute -top-20 -left-20 w-64 h-64 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
+                            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-blue-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
+                            
+                            <img src="/edtech-bg.png" alt="Platform" className="w-[85%] h-auto object-contain drop-shadow-2xl z-10 mb-10 transform hover:scale-105 transition-transform duration-700 ease-out" onError={(e) => e.target.style.display = 'none'} />
+                            
+                            <h2 className="text-white text-3xl font-black tracking-tight leading-tight z-10">Advanced Student Evaluation Platform</h2>
+                            <p className="text-blue-100 mt-5 text-[15px] font-medium z-10 max-w-[250px]">Secure, intelligent, and designed to propel your academic metrics forward.</p>
                         </div>
 
-                        <div className="px-8 pb-10">
-                            <h2 className="text-3xl font-extrabold text-slate-800 text-center mb-2 tracking-tight">
-                                {isRegistering ? 'Join the Class' : 'The Best Online Exam App'}
-                            </h2>
-                            <p className="text-slate-500 text-center text-[15px] max-w-xs mx-auto mb-8 font-medium">
-                                {isRegistering ? 'Start tracking your tests live.' : 'Exam Prep is the online platform for students to give live exam.'}
-                            </p>
+                        {/* Lado Formulario (Panel Derecho) */}
+                        <div className="w-full md:w-[55%] p-10 sm:p-14 lg:p-16 flex flex-col justify-center bg-white relative">
+                            <div className="mb-10 text-center md:text-left">
+                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-[1rem] flex items-center justify-center mb-6 shadow-inner mx-auto md:mx-0">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                </div>
+                                <h3 className="text-3xl font-extrabold text-[#1e293b] tracking-tight">
+                                    {isRegistering ? 'Create Account' : 'Welcome Back'}
+                                </h3>
+                                <p className="text-slate-500 mt-2.5 text-[15px] font-medium">
+                                    {isRegistering ? 'Enter your details to track your exams.' : 'Enter your credentials to access your dashboard.'}
+                                </p>
+                            </div>
 
-                            <form onSubmit={handleAuth} className="space-y-4">
+                            <form onSubmit={handleAuth} className="space-y-5">
                                 {isRegistering && (
-                                    <EdTechInput type="text" placeholder="Full Name" value={nameStr} onChange={(e) => setNameStr(e.target.value)} required />
+                                    <div className="space-y-1.5">
+                                        <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                                        <EdTechInput type="text" placeholder="e.g. John Doe" value={nameStr} onChange={(e) => setNameStr(e.target.value)} required />
+                                    </div>
                                 )}
-                                <EdTechInput type="email" placeholder="Email Address" value={emailStr} onChange={(e) => setEmailStr(e.target.value)} required />
-                                <EdTechInput type="password" placeholder="Password" value={passStr} onChange={(e) => setPassStr(e.target.value)} required />
-                                
-                                {errorMsg && <p className="text-red-500 text-sm font-bold text-center bg-red-50 p-3 rounded-xl">{errorMsg}</p>}
-                                
-                                <div className="pt-2">
-                                    <EdTechButton className="w-full text-lg shadow-blue-600/30">
-                                        {isRegistering ? 'Create Account' : 'Next'}
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                                    <EdTechInput type="email" placeholder="student@university.edu" value={emailStr} onChange={(e) => setEmailStr(e.target.value)} required />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between items-center ml-1">
+                                        <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">Password</label>
+                                        {!isRegistering && <span className="text-[11px] font-extrabold text-blue-600 hover:text-blue-800 cursor-pointer">Forgot?</span>}
+                                    </div>
+                                    <EdTechInput type="password" placeholder="••••••••" value={passStr} onChange={(e) => setPassStr(e.target.value)} required />
+                                </div>
+
+                                {errorMsg && (
+                                    <div className="bg-red-50 text-red-600 text-[13px] font-bold p-4 rounded-2xl border border-red-100 flex items-start">
+                                        <svg className="w-5 h-5 mr-2 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                                        <span>{errorMsg}</span>
+                                    </div>
+                                )}
+
+                                <div className="pt-4">
+                                    <EdTechButton className="w-full py-[1.15rem] text-[16px] shadow-blue-500/25">
+                                        {isRegistering ? 'Sign Up to Platform' : 'Secure Login'}
                                     </EdTechButton>
                                 </div>
                             </form>
 
-                            <div className="text-center mt-6">
-                                <button onClick={() => setIsRegistering(!isRegistering)} className="text-slate-400 font-bold hover:text-blue-600 transition-colors">
-                                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
-                                </button>
+                            <div className="mt-8 text-center md:text-left">
+                                <p className="text-slate-500 text-[14px] font-medium">
+                                    {isRegistering ? 'Already enrolled? ' : 'New to the platform? '}
+                                    <button onClick={(e) => { e.preventDefault(); setIsRegistering(!isRegistering); setErrorMsg(''); }} className="text-blue-600 font-extrabold hover:text-blue-800 transition-colors">
+                                        {isRegistering ? 'Sign In Demo' : 'Create Student ID'}
+                                    </button>
+                                </p>
                             </div>
                         </div>
                     </div>
