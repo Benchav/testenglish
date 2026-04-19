@@ -94,8 +94,20 @@ export default function App() {
             // Cargar preguntas para estudiante
             const qRef = collection(db, 'preguntas');
             const unsub = onSnapshot(qRef, (snapshot) => {
-                const loaded = snapshot.docs.map(doc => ({ fbId: doc.id, ...doc.data() }));
-                // Opcional: ordenar si hace falta
+                const loaded = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const correctString = data.options[data.correctIndex]; 
+                    // Aleatorizar el arreglo de opciones para este estudiante
+                    const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
+                    const newCorrectIndex = shuffledOptions.indexOf(correctString);
+
+                    return { 
+                        fbId: doc.id, 
+                        ...data, 
+                        options: shuffledOptions,
+                        shuffledCorrectIndex: newCorrectIndex
+                    };
+                });
                 loaded.sort((a,b) => a.id - b.id);
                 setQuestions(loaded);
             });
@@ -157,12 +169,12 @@ export default function App() {
 
     const handleSelectOption = (index) => {
         if (isAnswered) return; 
-        const isCorrect = index === questions[currentQuestionIndex].correctIndex;
+        const isCorrect = index === questions[currentQuestionIndex].shuffledCorrectIndex;
         if (isCorrect) setCorrectCount(prev => prev + 1);
         else setIncorrectCount(prev => prev + 1);
 
         const newAnswers = [...answers];
-        newAnswers[currentQuestionIndex] = index;
+        newAnswers[currentQuestionIndex] = { indexClicked: index, isCorrect: isCorrect };
         setAnswers(newAnswers);
         setIsAnswered(true);
     };
@@ -197,8 +209,8 @@ export default function App() {
     return (
         <div className="min-h-screen bg-gray-50 text-gray-800 font-sans p-4 md:p-8">
             <div className="max-w-3xl mx-auto">
-                <div className="flex justify-end mb-4">
-                    {user && (
+                <div className="flex justify-end mb-4 h-8">
+                    {user && view !== 'quiz' && (
                          <button onClick={handleLogout} className="text-gray-500 hover:text-black font-semibold text-sm mr-2 flex items-center">
                             <span className="mr-2">({user.email} - {userRole})</span> Salir
                          </button>
@@ -281,8 +293,8 @@ export default function App() {
                             {/* Opciones */}
                             <div className="space-y-3">
                                 {questions[currentQuestionIndex].options.map((opt, idx) => {
-                                    const isSelected = answers[currentQuestionIndex] === idx;
-                                    const isCorrect = questions[currentQuestionIndex].correctIndex === idx;
+                                    const isSelected = answers[currentQuestionIndex]?.indexClicked === idx;
+                                    const isCorrect = questions[currentQuestionIndex].shuffledCorrectIndex === idx;
                                     
                                     let cls = "bg-gray-50 border-gray-200 hover:bg-gray-100";
                                     if (isAnswered) {
@@ -366,7 +378,7 @@ export default function App() {
                                                     <td className="p-4">
                                                         <div className="flex flex-wrap gap-1 max-w-sm">
                                                             {res.answers.map((ans, i) => {
-                                                                const isCorr = ans === questions[i]?.correctIndex; 
+                                                                const isCorr = ans && ans.isCorrect === true; 
                                                                 return (
                                                                     <div key={i} className={`w-3 h-3 rounded-full ${isCorr ? 'bg-green-500' : 'bg-red-500'} shadow-sm`} title={`P${i+1}`}></div>
                                                                 );
