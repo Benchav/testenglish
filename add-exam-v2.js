@@ -22,6 +22,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+const TEACHER_EMAIL = "lucimar132803@gmail.com";
+const TEACHER_PASS = "luci2026";
 
 const EXAM_ID_OLD = 'english-grammar-exam';
 const EXAM_ID_NEW = 'simple-present-and-present-continuous';
@@ -61,6 +65,11 @@ const newQuestions = [
 
 async function main() {
     console.log("=== MULTI-EXAM MIGRATION SCRIPT ===\n");
+
+    // Authenticate as teacher to get write permissions
+    console.log("Authenticating as teacher...");
+    await signInWithEmailAndPassword(auth, TEACHER_EMAIL, TEACHER_PASS);
+    console.log("   Authenticated successfully.\n");
 
     // STEP 1: Tag existing questions with examId
     console.log("Step 1: Tagging existing questions...");
