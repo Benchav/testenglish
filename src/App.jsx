@@ -431,7 +431,7 @@ export default function App() {
                             <div className="text-white">
                                 <h1 className="text-2xl font-bold tracking-tight">Hi, {nameStr || user.email.split('@')[0]}</h1>
                                 <p className="text-blue-100 font-medium opacity-90">
-                                    {userRole === 'docente' ? 'Teacher Results Panel' : 'English Exam Home'}
+                                {userRole === 'docente' ? 'Teacher Results Panel' : (selectedExamTitle || 'English Exam Home')}
                                 </p>
                             </div>
                         </div>
@@ -521,20 +521,60 @@ export default function App() {
                     </div>
                 )}
 
-                {/* --- MÓDULO INICIO ESTUDIANTE --- */}
+                {/* --- MÓDULO SELECCIÓN DE EXAMEN --- */}
+                {view === 'select-exam' && userRole === 'estudiante' && (
+                    <div className="w-full bg-white p-8 md:p-12 rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.06)] -mt-16">
+                        <div className="text-center mb-10">
+                            <h2 className="text-3xl font-extrabold text-[#1e293b] mb-3">Available Exams</h2>
+                            <p className="text-[#64748b] text-[17px] font-medium">Select an exam to begin. Teacher Elimar Roa's official exams.</p>
+                        </div>
+                        {examsList.length === 0 ? (
+                            <div className="text-center py-16 bg-slate-50 rounded-3xl border border-slate-100">
+                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                                    <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                </div>
+                                <p className="text-slate-500 font-bold">Loading exams...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {examsList.map((exam, idx) => (
+                                    <button key={exam.id} onClick={() => handleSelectExam(exam)}
+                                        className="group text-left bg-gradient-to-br from-slate-50 to-white p-8 rounded-[1.5rem] border-2 border-slate-100 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-100 transition-all duration-300 transform hover:-translate-y-1 active:scale-[0.98]">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+                                                {idx + 1}
+                                            </div>
+                                            <svg className="w-6 h-6 text-slate-300 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                        </div>
+                                        <h3 className="text-xl font-extrabold text-[#1e293b] mb-2 group-hover:text-blue-700 transition-colors">{exam.title}</h3>
+                                        <p className="text-[#64748b] text-sm font-medium mb-4 line-clamp-2">{exam.description}</p>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{exam.totalQuestions} Questions</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* --- MÓDULO INICIO ESTUDIANTE (Exam-specific) --- */}
                 {view === 'start' && userRole === 'estudiante' && (
                     <div className="w-full bg-white p-8 md:p-12 rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.06)] -mt-16 text-center">
                         <div className="bg-blue-50/50 rounded-3xl p-8 mb-8 inline-block">
                             <img src="/edtech-bg.png" alt="English exam preparation" className="h-48 mx-auto hover:scale-105 transition-transform" />
                         </div>
-                        <h2 className="text-3xl font-extrabold text-[#1e293b] mb-4">Are you ready for Teacher Elimar Roa's English Exam?</h2>
+                        <h2 className="text-3xl font-extrabold text-[#1e293b] mb-2">{selectedExamTitle}</h2>
                         <p className="text-[#64748b] text-[17px] mb-10 max-w-md mx-auto font-medium">
-                            This exam has 30 questions. Choose one answer per question. Your score will be saved at the end.
+                            This exam has {questions.length || '...'} questions. Choose one answer per question. Your score will be saved at the end.
                         </p>
                         
                         {errorMsg && <p className="text-red-500 mb-6 font-bold bg-red-50 py-3 rounded-xl max-w-sm mx-auto">{errorMsg}</p>}
                         
-                        <div className="flex justify-center">
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                            <EdTechButton onClick={handleBackToExams} ghost className="text-lg w-full max-w-[200px]">
+                                ← Back
+                            </EdTechButton>
                             <EdTechButton onClick={handleStartQuiz} className="text-lg w-full max-w-[300px]">
                                 Start Exam
                             </EdTechButton>
@@ -645,7 +685,8 @@ export default function App() {
                         <img src="/edtech-bg.png" alt="Success" className="h-40 mx-auto -mt-24 mb-6 hover:-translate-y-2 transition-transform drop-shadow-xl" />
                         
                         <h2 className="text-3xl font-extrabold text-[#1e293b] mb-2 tracking-tight">Well Done!</h2>
-                        <p className="text-[#64748b] font-medium mb-10 text-[17px]">You have successfully completed the examination.</p>
+                        <p className="text-[#64748b] font-medium mb-2 text-[17px]">You have successfully completed:</p>
+                        <p className="text-blue-600 font-extrabold mb-8 text-lg">{selectedExamTitle || EXAM_NAME}</p>
                         
                         <div className="bg-gradient-to-tr from-blue-50 to-cyan-50 rounded-3xl p-8 mb-10 border border-blue-100">
                             <div className="text-6xl font-black text-blue-600 mb-2">
@@ -656,8 +697,8 @@ export default function App() {
                             </div>
                         </div>
 
-                        <EdTechButton onClick={() => setView('start')} ghost className="w-full text-lg">
-                            Back to Exam Home
+                        <EdTechButton onClick={() => { setSelectedExamId(null); setSelectedExamTitle(''); setView('select-exam'); }} ghost className="w-full text-lg">
+                            Back to Exams
                         </EdTechButton>
                     </div>
                 )}
