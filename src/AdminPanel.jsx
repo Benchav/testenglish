@@ -4,8 +4,7 @@ import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot, query, orderBy
 export default function AdminPanel({ db, resultsData, dashboardStatus, isRefreshingResults, handleRefreshResults, EXAM_NAME }) {
     const [adminTab, setAdminTab] = useState('grades'); // 'grades' | 'exams' | 'create-exam'
     const [examsList, setExamsList] = useState([]);
-    const [filterExamId, setFilterExamId] = useState('all');
-    const LEGACY_EXAM_ID = 'english-grammar-exam';
+    const [filterExamId, setFilterExamId] = useState('');
 
     // Create exam form state
     const [newExamTitle, setNewExamTitle] = useState('');
@@ -27,16 +26,16 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
         return () => unsub();
     }, [db]);
 
-    const filteredResults = filterExamId === 'all'
-        ? resultsData
-        : resultsData.filter(r => {
-            if (filterExamId === LEGACY_EXAM_ID) {
-                return !r.examId && r.examName === EXAM_NAME;
-            }
-            return r.examId === filterExamId;
-        });
+    useEffect(() => {
+        if (!filterExamId && examsList.length > 0) {
+            setFilterExamId(examsList[0].examId);
+        }
+    }, [filterExamId, examsList]);
 
-    const legacyResultsAvailable = resultsData.some(r => !r.examId && r.examName === EXAM_NAME);
+    const activeExamId = filterExamId || examsList[0]?.examId || '';
+    const filteredResults = activeExamId
+        ? resultsData.filter(r => r.examId === activeExamId)
+        : [];
 
     // --- Metrics ---
     const totalAttempted = filteredResults.length;
@@ -186,32 +185,45 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
                     <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden pt-6">
                         <div className="px-8 mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <h3 className="font-extrabold text-[#1e293b] text-xl">Student Results</h3>
-                            <div className="flex gap-3 items-center flex-wrap">
-                                <select value={filterExamId} onChange={e => setFilterExamId(e.target.value)}
-                                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 bg-white focus:ring-2 focus:ring-blue-400 outline-none">
-                                    <option value="all">All Exams</option>
-                                    {examsList.map(e => <option key={e.id} value={e.examId}>{e.title}</option>)}
-                                    {legacyResultsAvailable && <option value={LEGACY_EXAM_ID}>{EXAM_NAME} (legacy)</option>}
-                                </select>
+                            <div className="flex gap-2 items-center flex-wrap">
+                                {examsList.map((exam) => {
+                                    const isActive = activeExamId === exam.examId;
+                                    const count = resultsData.filter(r => r.examId === exam.examId).length;
+                                    return (
+                                        <button
+                                            key={exam.id}
+                                            onClick={() => setFilterExamId(exam.examId)}
+                                            className={`px-4 py-2 rounded-full text-sm font-bold border transition-all ${isActive ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-700'}`}
+                                        >
+                                            {exam.title}
+                                            <span className={`ml-2 text-xs ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>({count})</span>
+                                        </button>
+                                    );
+                                })}
                                 <button onClick={handleRefreshResults} disabled={isRefreshingResults}
-                                    className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all border ${isRefreshingResults ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}>
+                                    className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all border ${isRefreshingResults ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800'}`}>
                                     {isRefreshingResults ? 'Refreshing...' : 'Refresh'}
                                 </button>
                             </div>
                         </div>
-                        <p className="px-8 text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">{dashboardStatus || 'Live sync active.'}</p>
+                        <div className="px-8 mb-5">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 border border-slate-100">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                {dashboardStatus || 'Live sync active.'}
+                            </div>
+                        </div>
 
                         {filteredResults.length === 0 ? (
-                            <div className="text-center py-20 bg-slate-50 mx-4 mb-4 rounded-3xl border border-slate-100">
-                                <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <div className="text-center py-20 bg-slate-50 mx-4 mb-4 rounded-3xl border border-dashed border-slate-200">
+                                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
                                     <svg className="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                     </svg>
                                 </div>
-                                <p className="text-slate-500 font-bold">No submissions found.</p>
+                                <p className="text-slate-500 font-bold">No submissions found for this exam.</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-slate-100 px-4 pb-4">
                                 {filteredResults.map(res => {
                                     const name = res.studentName || 'Unknown';
                                     const total = Number(res.total) || 0;
@@ -221,7 +233,7 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
                                     const examName = res.examName || EXAM_NAME;
                                     const date = res.timestamp ? new Date(res.timestamp) : null;
                                     return (
-                                        <div key={res.id} className="p-6 md:px-8 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div key={res.id} className="p-6 md:px-6 rounded-2xl hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
                                             <div className="flex items-center">
                                                 <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg mr-4">
                                                     {name.charAt(0).toUpperCase()}
