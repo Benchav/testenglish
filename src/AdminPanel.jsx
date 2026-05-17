@@ -6,6 +6,14 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
     const [examsList, setExamsList] = useState([]);
     const [filterExamId, setFilterExamId] = useState('');
 
+    const normalizeText = (value = '') =>
+        String(value)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+
     // Create exam form state
     const [newExamTitle, setNewExamTitle] = useState('');
     const [newExamDesc, setNewExamDesc] = useState('');
@@ -33,8 +41,27 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
     }, [filterExamId, examsList]);
 
     const activeExamId = filterExamId || examsList[0]?.examId || '';
+    const activeExam = examsList.find(e => e.examId === activeExamId);
+
+    const matchesLegacyExam = (result, exam) => {
+        if (!result || result.examId) return false;
+        if (!exam) return false;
+
+        const resultName = normalizeText(result.examName || result.testName || '');
+        const examTitle = normalizeText(exam.title || '');
+        const legacyTitle = normalizeText(EXAM_NAME || '');
+
+        if (!resultName) return false;
+
+        return resultName === examTitle
+            || resultName === legacyTitle
+            || resultName.includes(examTitle)
+            || examTitle.includes(resultName)
+            || (exam.examId === 'english-grammar-exam' && resultName.includes('grammar'));
+    };
+
     const filteredResults = activeExamId
-        ? resultsData.filter(r => r.examId === activeExamId)
+        ? resultsData.filter(r => r.examId === activeExamId || matchesLegacyExam(r, activeExam))
         : [];
 
     // --- Metrics ---
@@ -188,7 +215,7 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
                             <div className="flex gap-2 items-center flex-wrap">
                                 {examsList.map((exam) => {
                                     const isActive = activeExamId === exam.examId;
-                                    const count = resultsData.filter(r => r.examId === exam.examId).length;
+                                    const count = resultsData.filter(r => r.examId === exam.examId || matchesLegacyExam(r, exam)).length;
                                     return (
                                         <button
                                             key={exam.id}
