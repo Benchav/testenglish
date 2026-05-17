@@ -5,6 +5,7 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
     const [adminTab, setAdminTab] = useState('grades'); // 'grades' | 'exams' | 'create-exam'
     const [examsList, setExamsList] = useState([]);
     const [filterExamId, setFilterExamId] = useState('all');
+    const LEGACY_EXAM_ID = 'english-grammar-exam';
 
     // Create exam form state
     const [newExamTitle, setNewExamTitle] = useState('');
@@ -24,20 +25,24 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
             setExamsList(data);
         });
         return () => unsub();
-    }, []);
+    }, [db]);
 
     const filteredResults = filterExamId === 'all'
         ? resultsData
-        : resultsData.filter(r => r.examId === filterExamId || (!r.examId && filterExamId === 'english-grammar-exam' && r.examName === EXAM_NAME));
+        : resultsData.filter(r => {
+            if (filterExamId === LEGACY_EXAM_ID) {
+                return !r.examId && r.examName === EXAM_NAME;
+            }
+            return r.examId === filterExamId;
+        });
+
+    const legacyResultsAvailable = resultsData.some(r => !r.examId && r.examName === EXAM_NAME);
 
     // --- Metrics ---
     const totalAttempted = filteredResults.length;
-    let globalAcc = 0;
-    if (totalAttempted > 0) {
-        const totalScore = filteredResults.reduce((a, c) => a + (Number(c.score) || 0), 0);
-        const maxScore = filteredResults.reduce((a, c) => a + (Number(c.total) || 0), 0);
-        globalAcc = maxScore > 0 ? ((totalScore / maxScore) * 100).toFixed(0) : 0;
-    }
+    const totalScore = filteredResults.reduce((a, c) => a + (Number(c.score) || 0), 0);
+    const maxScore = filteredResults.reduce((a, c) => a + (Number(c.total) || 0), 0);
+    const globalAcc = totalAttempted > 0 && maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
     // --- Question helpers ---
     const addEmptyQuestion = () => {
@@ -186,6 +191,7 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
                                     className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 bg-white focus:ring-2 focus:ring-blue-400 outline-none">
                                     <option value="all">All Exams</option>
                                     {examsList.map(e => <option key={e.id} value={e.examId}>{e.title}</option>)}
+                                    {legacyResultsAvailable && <option value={LEGACY_EXAM_ID}>{EXAM_NAME} (legacy)</option>}
                                 </select>
                                 <button onClick={handleRefreshResults} disabled={isRefreshingResults}
                                     className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all border ${isRefreshingResults ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}>
