@@ -23,6 +23,14 @@ const EXAM_NAME = 'English Grammar Exam';
 const QUIZ_PROGRESS_STORAGE_PREFIX = 'english-grammar-exam-progress-v1';
 const TEACHER_EMAIL = 'lucimar132803@gmail.com';
 
+const normalizeKey = (value = '') =>
+    String(value)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+
 const EdTechButton = memo(function EdTechButton({ onClick, children, disabled, className = '', ghost = false }) {
     let baseClass = "px-8 py-3.5 rounded-full font-bold tracking-wide transition-all duration-300 transform active:scale-95 outline-none flex justify-center items-center ";
 
@@ -222,14 +230,18 @@ export default function App() {
                 const data = d.data();
                 if (data.examId) {
                     completed.add(data.examId);
-                } else if (data.examName === EXAM_NAME) {
-                    completed.add('english-grammar-exam');
+                } else {
+                    const legacyName = normalizeKey(data.examName || data.testName || '');
+                    const matchedExam = examsList.find(exam => normalizeKey(exam.title || '') === legacyName);
+                    if (matchedExam?.examId) {
+                        completed.add(matchedExam.examId);
+                    }
                 }
             });
             setCompletedExamIds(completed);
         });
         return () => unsub();
-    }, [user, userRole]);
+    }, [user, userRole, examsList]);
 
     // Load questions from Firebase filtered by examId
     useEffect(() => {
