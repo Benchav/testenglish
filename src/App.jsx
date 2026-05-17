@@ -298,6 +298,10 @@ export default function App() {
             saved.questions.length - 1
         );
 
+        if (saved.selectedExamId && selectedExamId && saved.selectedExamId !== selectedExamId) {
+            return;
+        }
+
         setQuestions(saved.questions);
         setAnswers(saved.answers);
         setCurrentQuestionIndex(safeCurrentIndex);
@@ -346,6 +350,8 @@ export default function App() {
         showHint,
         correctCount,
         incorrectCount,
+        selectedExamId,
+        selectedExamTitle,
         saveQuizProgress,
     ]);
 
