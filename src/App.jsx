@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, getDocsFromServer } from 'firebase/firestore';
-import { EXAM_CATALOG, LOCAL_QUESTIONS } from './examData.js';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -180,10 +179,15 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
-    // Load exams catalog (from local data)
+    // Load exams catalog from Firebase
     useEffect(() => {
         if (!user || userRole !== 'estudiante') return;
-        setExamsList([...EXAM_CATALOG].sort((a, b) => (a.order || 0) - (b.order || 0)));
+        const unsub = onSnapshot(collection(db, 'examenes'), (snapshot) => {
+            const exams = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            exams.sort((a, b) => (a.order || 0) - (b.order || 0));
+            setExamsList(exams);
+        });
+        return () => unsub();
     }, [user, userRole]);
 
     // Load student's completed exams from calificaciones
@@ -196,11 +200,8 @@ export default function App() {
                 const data = d.data();
                 if (data.examId) {
                     completed.add(data.examId);
-                } else if (data.examName) {
-                    EXAM_CATALOG.forEach(exam => {
-                        if (exam.title === data.examName) completed.add(exam.examId);
-                    });
-                    if (data.examName === EXAM_NAME) completed.add('english-grammar-exam');
+                } else if (data.examName === EXAM_NAME) {
+                    completed.add('english-grammar-exam');
                 }
             });
             setCompletedExamIds(completed);
@@ -208,27 +209,10 @@ export default function App() {
         return () => unsub();
     }, [user, userRole]);
 
-    // Load questions: from Firestore for old exam, from local data for new exams
+    // Load questions from Firebase filtered by examId
     useEffect(() => {
         if (!user || userRole !== 'estudiante' || !selectedExamId || view === 'quiz') return;
-
-        const examMeta = EXAM_CATALOG.find(e => e.examId === selectedExamId);
-
-        // If exam has local questions, use them directly
-        if (examMeta?.source === 'local' && LOCAL_QUESTIONS[selectedExamId]) {
-            const loaded = LOCAL_QUESTIONS[selectedExamId].map(q => {
-                const correctString = q.options[q.correctIndex];
-                const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
-                const newCorrectIndex = shuffledOptions.indexOf(correctString);
-                return { ...q, options: shuffledOptions, shuffledCorrectIndex: newCorrectIndex };
-            });
-            loaded.sort((a, b) => a.id - b.id);
-            setQuestions(loaded);
-            return;
-        }
-
-        // Otherwise load from Firestore (old exam - no examId field on docs)
-        const qRef = collection(db, 'preguntas');
+        const qRef = query(collection(db, 'preguntas'), where('examId', '==', selectedExamId));
         const unsub = onSnapshot(qRef, (snapshot) => {
             const loaded = snapshot.docs.map(doc => {
                 const data = doc.data();
