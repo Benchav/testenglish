@@ -313,21 +313,34 @@ export default function App() {
         e.preventDefault();
         setErrorMsg('');
         try {
-            if (isRegistering) {
-                if(!nameStr.trim()) return setErrorMsg('Please enter your name.');
-                const cred = await createUserWithEmailAndPassword(auth, emailStr, passStr);
-                await setDoc(doc(db, "usuarios", cred.user.uid), {
-                    email: emailStr,
-                    rol: 'estudiante',
-                    nombre: nameStr,
-                    createdAt: new Date().toISOString()
-                });
-            } else {
+            try {
                 await signInWithEmailAndPassword(auth, emailStr, passStr);
+                return;
+            } catch (signInError) {
+                if (signInError?.code !== 'auth/user-not-found') {
+                    throw signInError;
+                }
             }
+
+            const cred = await createUserWithEmailAndPassword(auth, emailStr, passStr);
+            await setDoc(doc(db, "usuarios", cred.user.uid), {
+                email: emailStr,
+                rol: 'estudiante',
+                nombre: nameStr.trim() || emailStr,
+                createdAt: new Date().toISOString()
+            });
         } catch (error) {
             console.error(error);
-            setErrorMsg('Invalid credentials. Please check your email and password.');
+            const code = error?.code;
+            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                setErrorMsg('Password incorrect.');
+            } else if (code === 'auth/email-already-in-use') {
+                setErrorMsg('This account already exists. Please sign in with the correct password.');
+            } else if (code === 'auth/weak-password') {
+                setErrorMsg('Password is too weak. Use at least 6 characters.');
+            } else {
+                setErrorMsg('Could not sign in or register. Check your email and password.');
+            }
         }
     };
 
@@ -484,12 +497,10 @@ export default function App() {
                             </div>
 
                             <form onSubmit={handleAuth} className="space-y-5">
-                                {isRegistering && (
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-                                        <EdTechInput type="text" placeholder="e.g. John Doe" value={nameStr} onChange={handleNameChange} required />
-                                    </div>
-                                )}
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                                    <EdTechInput type="text" placeholder="e.g. John Doe" value={nameStr} onChange={handleNameChange} required={false} />
+                                </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
                                     <EdTechInput type="email" placeholder="studentname@gmail.com" value={emailStr} onChange={handleEmailChange} required />
@@ -497,7 +508,7 @@ export default function App() {
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between items-center ml-1">
                                         <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">Password</label>
-                                        {!isRegistering && <span className="text-[11px] font-extrabold text-blue-600 hover:text-blue-800 cursor-pointer">Forgot?</span>}
+                                        <span className="text-[11px] font-extrabold text-blue-600 hover:text-blue-800 cursor-pointer">Forgot?</span>
                                     </div>
                                     <EdTechInput type="password" placeholder="••••••••" value={passStr} onChange={handlePasswordChange} required />
                                 </div>
@@ -511,14 +522,14 @@ export default function App() {
 
                                 <div className="pt-4">
                                     <EdTechButton className="w-full py-[1.15rem] text-[16px] shadow-blue-500/25">
-                                        {isRegistering ? 'Create Account' : 'Sign In'}
+                                        {isRegistering ? 'Create Account' : 'Start / Create Account'}
                                     </EdTechButton>
                                 </div>
                             </form>
 
                             <div className="mt-8 text-center md:text-left">
                                 <p className="text-slate-500 text-[14px] font-medium">
-                                    {isRegistering ? 'Already registered? ' : 'Need an account for this exam? '}
+                                    {isRegistering ? 'Already registered? ' : 'If the student already exists, sign-in will be used automatically. '}
                                     <button onClick={handleToggleRegister} className="text-blue-600 font-extrabold hover:text-blue-800 transition-colors">
                                         {isRegistering ? 'Sign In' : 'Create Account'}
                                     </button>
