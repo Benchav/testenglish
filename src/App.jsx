@@ -315,8 +315,14 @@ export default function App() {
         try {
             const normalizedEmail = emailStr.trim().toLowerCase();
             const signInMethods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+            const hasPasswordProvider = signInMethods.includes('password');
 
-            if (signInMethods.length > 0) {
+            if (signInMethods.length > 0 && !hasPasswordProvider) {
+                setErrorMsg('This email already exists with another sign-in method. Use the same provider or contact the teacher.');
+                return;
+            }
+
+            if (hasPasswordProvider) {
                 await signInWithEmailAndPassword(auth, normalizedEmail, passStr);
                 return;
             }
@@ -331,12 +337,14 @@ export default function App() {
         } catch (error) {
             console.error(error);
             const code = error?.code;
-            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
                 setErrorMsg('Password incorrect.');
             } else if (code === 'auth/email-already-in-use') {
                 setErrorMsg('This account already exists. Please sign in with the correct password.');
             } else if (code === 'auth/weak-password') {
                 setErrorMsg('Password is too weak. Use at least 6 characters.');
+            } else if (code === 'auth/invalid-email') {
+                setErrorMsg('Invalid email address.');
             } else {
                 setErrorMsg('Could not sign in or register. Check your email and password.');
             }
@@ -521,7 +529,7 @@ export default function App() {
 
                                 <div className="pt-4">
                                     <EdTechButton className="w-full py-[1.15rem] text-[16px] shadow-blue-500/25">
-                                        {isRegistering ? 'Create Account' : 'Start / Create Account'}
+                                        {isRegistering ? 'Create Account' : 'Sign In / Create Account'}
                                     </EdTechButton>
                                 </div>
                             </form>
