@@ -152,7 +152,7 @@ export default function App() {
                     if (userDoc.exists()) {
                         const rol = userDoc.data().rol;
                         setUserRole(rol);
-                        setView(rol === 'docente' ? 'dashboard' : 'start');
+                        setView(rol === 'docente' ? 'dashboard' : 'select-exam');
                         if (rol === 'estudiante') setNameStr(userDoc.data().nombre || currentUser.email);
                     } else {
                         await setDoc(doc(db, "usuarios", currentUser.uid), {
@@ -162,12 +162,12 @@ export default function App() {
                             createdAt: new Date().toISOString()
                         });
                         setUserRole('estudiante');
-                        setView('start');
+                        setView('select-exam');
                     }
                 } catch(e) {
                     console.error("Error reading user role:", e);
                     setUserRole('estudiante');
-                    setView('start');
+                    setView('select-exam');
                 }
             } else {
                 setUserRole(null);
@@ -251,6 +251,8 @@ export default function App() {
         setShowHint(Boolean(saved.showHint));
         setCorrectCount(Number(saved.correctCount) || 0);
         setIncorrectCount(Number(saved.incorrectCount) || 0);
+        if (saved.selectedExamId) setSelectedExamId(saved.selectedExamId);
+        if (saved.selectedExamTitle) setSelectedExamTitle(saved.selectedExamTitle);
         setRestoreNotice('Your previous progress was restored from this device.');
         setView('quiz');
     }, [user, userRole, hasAttemptedRestore, loadQuizProgress, clearQuizProgress]);
@@ -272,6 +274,8 @@ export default function App() {
             showHint,
             correctCount,
             incorrectCount,
+            selectedExamId,
+            selectedExamTitle,
             updatedAt: new Date().toISOString(),
         });
     }, [
@@ -326,6 +330,22 @@ export default function App() {
         }
     }, [fetchTeacherResultsFromServer]);
 
+    const handleSelectExam = (exam) => {
+        setSelectedExamId(exam.examId);
+        setSelectedExamTitle(exam.title);
+        setQuestions([]);
+        setErrorMsg('');
+        setView('start');
+    };
+
+    const handleBackToExams = () => {
+        setSelectedExamId(null);
+        setSelectedExamTitle('');
+        setQuestions([]);
+        setErrorMsg('');
+        setView('select-exam');
+    };
+
     const handleStartQuiz = () => {
         if(questions.length === 0) {
             setErrorMsg('Questions are still syncing. Please try again in a few seconds.');
@@ -366,7 +386,8 @@ export default function App() {
                 await addDoc(resultsRef, {
                     uid: user.uid,
                     studentName: nameStr || user.email,
-                    examName: EXAM_NAME,
+                    examName: selectedExamTitle || EXAM_NAME,
+                    examId: selectedExamId || '',
                     score: correctCount,
                     total: questions.length,
                     incorrectAnswers: incorrectCount,
