@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, getDocsFromServer } from 'firebase/firestore';
+import { EXAM_CATALOG, LOCAL_QUESTIONS } from './examData.js';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -179,15 +180,10 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
-    // Load exams catalog for students
+    // Load exams catalog (from local data)
     useEffect(() => {
         if (!user || userRole !== 'estudiante') return;
-        const unsub = onSnapshot(collection(db, 'examenes'), (snapshot) => {
-            const exams = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            exams.sort((a, b) => (a.order || 0) - (b.order || 0));
-            setExamsList(exams);
-        });
-        return () => unsub();
+        setExamsList([...EXAM_CATALOG].sort((a, b) => (a.order || 0) - (b.order || 0)));
     }, [user, userRole]);
 
     // Load student's completed exams from calificaciones
@@ -198,41 +194,50 @@ export default function App() {
             const completed = new Set();
             snapshot.docs.forEach(d => {
                 const data = d.data();
-                // Support both examId field and legacy examName matching
                 if (data.examId) {
                     completed.add(data.examId);
                 } else if (data.examName) {
-                    // Legacy: match old results by examName to examId
-                    examsList.forEach(exam => {
+                    EXAM_CATALOG.forEach(exam => {
                         if (exam.title === data.examName) completed.add(exam.examId);
                     });
-                    // Fallback: if examName is the old default, mark the old exam
                     if (data.examName === EXAM_NAME) completed.add('english-grammar-exam');
                 }
             });
             setCompletedExamIds(completed);
         });
         return () => unsub();
-    }, [user, userRole, examsList]);
+    }, [user, userRole]);
 
-    // Load questions filtered by selected exam
+    // Load questions: from Firestore for old exam, from local data for new exams
     useEffect(() => {
         if (!user || userRole !== 'estudiante' || !selectedExamId || view === 'quiz') return;
-        const qRef = query(collection(db, 'preguntas'), where('examId', '==', selectedExamId));
+
+        const examMeta = EXAM_CATALOG.find(e => e.examId === selectedExamId);
+
+        // If exam has local questions, use them directly
+        if (examMeta?.source === 'local' && LOCAL_QUESTIONS[selectedExamId]) {
+            const loaded = LOCAL_QUESTIONS[selectedExamId].map(q => {
+                const correctString = q.options[q.correctIndex];
+                const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+                const newCorrectIndex = shuffledOptions.indexOf(correctString);
+                return { ...q, options: shuffledOptions, shuffledCorrectIndex: newCorrectIndex };
+            });
+            loaded.sort((a, b) => a.id - b.id);
+            setQuestions(loaded);
+            return;
+        }
+
+        // Otherwise load from Firestore (old exam - no examId field on docs)
+        const qRef = collection(db, 'preguntas');
         const unsub = onSnapshot(qRef, (snapshot) => {
             const loaded = snapshot.docs.map(doc => {
                 const data = doc.data();
                 const correctString = data.options[data.correctIndex]; 
                 const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
                 const newCorrectIndex = shuffledOptions.indexOf(correctString);
-                return { 
-                    fbId: doc.id, 
-                    ...data, 
-                    options: shuffledOptions,
-                    shuffledCorrectIndex: newCorrectIndex
-                };
+                return { fbId: doc.id, ...data, options: shuffledOptions, shuffledCorrectIndex: newCorrectIndex };
             });
-            loaded.sort((a,b) => a.id - b.id);
+            loaded.sort((a, b) => a.id - b.id);
             setQuestions(loaded);
         });
         return () => unsub();
