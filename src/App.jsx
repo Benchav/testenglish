@@ -70,6 +70,7 @@ export default function App() {
     const [examsList, setExamsList] = useState([]);
     const [selectedExamId, setSelectedExamId] = useState(null);
     const [selectedExamTitle, setSelectedExamTitle] = useState('');
+    const [completedExamIds, setCompletedExamIds] = useState(new Set());
 
     // Datos del Quiz
     const [questions, setQuestions] = useState([]);
@@ -188,6 +189,31 @@ export default function App() {
         });
         return () => unsub();
     }, [user, userRole]);
+
+    // Load student's completed exams from calificaciones
+    useEffect(() => {
+        if (!user || userRole !== 'estudiante') return;
+        const cRef = query(collection(db, 'calificaciones'), where('uid', '==', user.uid));
+        const unsub = onSnapshot(cRef, (snapshot) => {
+            const completed = new Set();
+            snapshot.docs.forEach(d => {
+                const data = d.data();
+                // Support both examId field and legacy examName matching
+                if (data.examId) {
+                    completed.add(data.examId);
+                } else if (data.examName) {
+                    // Legacy: match old results by examName to examId
+                    examsList.forEach(exam => {
+                        if (exam.title === data.examName) completed.add(exam.examId);
+                    });
+                    // Fallback: if examName is the old default, mark the old exam
+                    if (data.examName === EXAM_NAME) completed.add('english-grammar-exam');
+                }
+            });
+            setCompletedExamIds(completed);
+        });
+        return () => unsub();
+    }, [user, userRole, examsList]);
 
     // Load questions filtered by selected exam
     useEffect(() => {
@@ -537,22 +563,37 @@ export default function App() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {examsList.map((exam, idx) => (
-                                    <button key={exam.id} onClick={() => handleSelectExam(exam)}
-                                        className="group text-left bg-gradient-to-br from-slate-50 to-white p-8 rounded-[1.5rem] border-2 border-slate-100 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-100 transition-all duration-300 transform hover:-translate-y-1 active:scale-[0.98]">
+                                {examsList.map((exam, idx) => {
+                                    const isCompleted = completedExamIds.has(exam.examId);
+                                    return (
+                                    <button key={exam.id} onClick={() => !isCompleted && handleSelectExam(exam)} disabled={isCompleted}
+                                        className={`group text-left p-8 rounded-[1.5rem] border-2 transition-all duration-300 ${
+                                            isCompleted
+                                                ? 'bg-slate-50 border-slate-200 cursor-not-allowed opacity-70'
+                                                : 'bg-gradient-to-br from-slate-50 to-white border-slate-100 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-100 transform hover:-translate-y-1 active:scale-[0.98]'
+                                        }`}>
                                         <div className="flex items-start justify-between mb-4">
-                                            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                                                {idx + 1}
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg transition-transform ${
+                                                isCompleted
+                                                    ? 'bg-gradient-to-br from-green-500 to-emerald-400 shadow-green-500/30'
+                                                    : 'bg-gradient-to-br from-blue-500 to-cyan-400 shadow-blue-500/30 group-hover:scale-110'
+                                            }`}>
+                                                {isCompleted ? <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg> : idx + 1}
                                             </div>
-                                            <svg className="w-6 h-6 text-slate-300 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                            {isCompleted ? (
+                                                <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full bg-green-50 text-green-600 border border-green-200">Completed ✓</span>
+                                            ) : (
+                                                <svg className="w-6 h-6 text-slate-300 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                            )}
                                         </div>
-                                        <h3 className="text-xl font-extrabold text-[#1e293b] mb-2 group-hover:text-blue-700 transition-colors">{exam.title}</h3>
+                                        <h3 className={`text-xl font-extrabold mb-2 transition-colors ${isCompleted ? 'text-slate-400' : 'text-[#1e293b] group-hover:text-blue-700'}`}>{exam.title}</h3>
                                         <p className="text-[#64748b] text-sm font-medium mb-4 line-clamp-2">{exam.description}</p>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{exam.totalQuestions} Questions</span>
+                                            <span className={`text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full border ${isCompleted ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{exam.totalQuestions} Questions</span>
                                         </div>
                                     </button>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
