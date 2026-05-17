@@ -43,8 +43,6 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
     const activeExamId = filterExamId || examsList[0]?.examId || '';
     const activeExam = examsList.find(e => e.examId === activeExamId);
 
-    const activeExam = examsList.find(e => e.examId === activeExamId);
-
     const matchesLegacyResult = (result, exam) => {
         if (!result || result.examId || !exam) return false;
         const resultName = normalizeText(result.examName || result.testName || '');
