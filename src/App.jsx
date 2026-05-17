@@ -226,15 +226,16 @@ export default function App() {
         const cRef = query(collection(db, 'calificaciones'), where('uid', '==', user.uid));
         const unsub = onSnapshot(cRef, (snapshot) => {
             const completed = new Set();
+            const primaryExam = examsList[0];
             snapshot.docs.forEach(d => {
                 const data = d.data();
                 if (data.examId) {
                     completed.add(data.examId);
-                } else {
+                } else if (primaryExam) {
                     const legacyName = normalizeKey(data.examName || data.testName || '');
-                    const matchedExam = examsList.find(exam => normalizeKey(exam.title || '') === legacyName);
-                    if (matchedExam?.examId) {
-                        completed.add(matchedExam.examId);
+                    const primaryTitle = normalizeKey(primaryExam.title || '');
+                    if (legacyName && legacyName === primaryTitle) {
+                        completed.add(primaryExam.examId);
                     }
                 }
             });

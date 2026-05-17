@@ -41,19 +41,20 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
     }, [filterExamId, examsList]);
 
     const activeExamId = filterExamId || examsList[0]?.examId || '';
+    const primaryExam = examsList[0];
     const activeExam = examsList.find(e => e.examId === activeExamId);
 
-    const matchesLegacyResult = (result, exam) => {
-        if (!result || result.examId || !exam) return false;
+    const isLegacyResultForPrimaryExam = (result) => {
+        if (!result || result.examId || !primaryExam) return false;
         const resultName = normalizeText(result.examName || result.testName || '');
-        const examTitle = normalizeText(exam.title || '');
-        return Boolean(resultName) && resultName === examTitle;
+        const primaryTitle = normalizeText(primaryExam.title || '');
+        return Boolean(resultName) && resultName === primaryTitle;
     };
 
     const filteredResults = activeExamId
         ? resultsData.filter(r => {
             if (r.examId) return r.examId === activeExamId;
-            return matchesLegacyResult(r, activeExam);
+            return activeExamId === primaryExam?.examId && isLegacyResultForPrimaryExam(r);
         })
         : [];
 
@@ -210,7 +211,7 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
                                     const isActive = activeExamId === exam.examId;
                                     const count = resultsData.filter(r => {
                                         if (r.examId) return r.examId === exam.examId;
-                                        return matchesLegacyResult(r, exam);
+                                        return exam.examId === primaryExam?.examId && isLegacyResultForPrimaryExam(r);
                                     }).length;
                                     return (
                                         <button
