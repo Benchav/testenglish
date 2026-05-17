@@ -222,7 +222,11 @@ export default function App() {
                 const newCorrectIndex = shuffledOptions.indexOf(correctString);
                 return { fbId: doc.id, ...data, options: shuffledOptions, shuffledCorrectIndex: newCorrectIndex };
             });
-            loaded.sort((a, b) => a.id - b.id);
+            loaded.sort((a, b) => {
+                const aId = Number(a.id ?? a.order ?? 0);
+                const bId = Number(b.id ?? b.order ?? 0);
+                return aId - bId;
+            });
             setQuestions(loaded);
         });
         return () => unsub();
@@ -398,6 +402,10 @@ export default function App() {
     const handleStartQuiz = () => {
         if(questions.length === 0) {
             setErrorMsg('Questions are still syncing. Please try again in a few seconds.');
+            return;
+        }
+        if (selectedExamId && completedExamIds.has(selectedExamId)) {
+            setErrorMsg('You already completed this exam.');
             return;
         }
         if (selectedExamId && questions.some(q => q.examId !== selectedExamId)) {
