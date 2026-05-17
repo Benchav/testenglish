@@ -21,6 +21,7 @@ const db = getFirestore(app);
 const optionLetters = ['A', 'B', 'C', 'D'];
 const EXAM_NAME = 'English Grammar Exam';
 const QUIZ_PROGRESS_STORAGE_PREFIX = 'english-grammar-exam-progress-v1';
+const TEACHER_EMAIL = 'lucimar132803@gmail.com';
 
 const EdTechButton = memo(function EdTechButton({ onClick, children, disabled, className = '', ghost = false }) {
     let baseClass = "px-8 py-3.5 rounded-full font-bold tracking-wide transition-all duration-300 transform active:scale-95 outline-none flex justify-center items-center ";
@@ -150,14 +151,29 @@ export default function App() {
             setUser(currentUser);
             if (currentUser) {
                 try {
-                    const userDoc = await getDoc(doc(db, "usuarios", currentUser.uid));
-                    if (userDoc.exists()) {
+                    const userDocRef = doc(db, "usuarios", currentUser.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    const isTeacher = currentUser.email?.toLowerCase() === TEACHER_EMAIL;
+
+                    if (isTeacher) {
+                        const teacherData = {
+                            email: currentUser.email,
+                            rol: 'docente',
+                            nombre: currentUser.displayName || 'Teacher',
+                            createdAt: new Date().toISOString()
+                        };
+                        if (!userDoc.exists() || userDoc.data()?.rol !== 'docente') {
+                            await setDoc(userDocRef, teacherData, { merge: true });
+                        }
+                        setUserRole('docente');
+                        setView('dashboard');
+                    } else if (userDoc.exists()) {
                         const rol = userDoc.data().rol;
                         setUserRole(rol);
                         setView(rol === 'docente' ? 'dashboard' : 'select-exam');
                         if (rol === 'estudiante') setNameStr(userDoc.data().nombre || currentUser.email);
                     } else {
-                        await setDoc(doc(db, "usuarios", currentUser.uid), {
+                        await setDoc(userDocRef, {
                             email: currentUser.email,
                             rol: 'estudiante',
                             nombre: currentUser.displayName || currentUser.email,
@@ -168,8 +184,13 @@ export default function App() {
                     }
                 } catch(e) {
                     console.error("Error reading user role:", e);
-                    setUserRole('estudiante');
-                    setView('select-exam');
+                    if (currentUser.email?.toLowerCase() === TEACHER_EMAIL) {
+                        setUserRole('docente');
+                        setView('dashboard');
+                    } else {
+                        setUserRole('estudiante');
+                        setView('select-exam');
+                    }
                 }
             } else {
                 setUserRole(null);
