@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, onSnapshot, query, orderBy, getDocsFromServer } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, getDocsFromServer } from 'firebase/firestore';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -65,6 +65,11 @@ export default function App() {
 
     // Estado principal de navegación
     const [view, setView] = useState('auth'); 
+
+    // Multi-exam state
+    const [examsList, setExamsList] = useState([]);
+    const [selectedExamId, setSelectedExamId] = useState(null);
+    const [selectedExamTitle, setSelectedExamTitle] = useState('');
 
     // Datos del Quiz
     const [questions, setQuestions] = useState([]);
