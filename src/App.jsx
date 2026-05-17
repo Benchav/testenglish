@@ -501,7 +501,7 @@ export default function App() {
                 setView('result');
             } catch (err) {
                 console.error("Error saving:", err);
-                setErrorMsg('Connection error while saving your score.');
+                setErrorMsg('Connection error while saving your score. Your progress is still saved locally.');
             }
         }
     };
