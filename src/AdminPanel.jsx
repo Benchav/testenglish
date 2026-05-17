@@ -43,25 +43,14 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
     const activeExamId = filterExamId || examsList[0]?.examId || '';
     const activeExam = examsList.find(e => e.examId === activeExamId);
 
-    const matchesLegacyExam = (result, exam) => {
-        if (!result || result.examId) return false;
-        if (!exam) return false;
-
-        const resultName = normalizeText(result.examName || result.testName || '');
-        const examTitle = normalizeText(exam.title || '');
-        const legacyTitle = normalizeText(EXAM_NAME || '');
-
-        if (!resultName) return false;
-
-        return resultName === examTitle
-            || resultName === legacyTitle
-            || resultName.includes(examTitle)
-            || examTitle.includes(resultName)
-            || (exam.examId === 'english-grammar-exam' && resultName.includes('grammar'));
-    };
+    const legacyExamId = activeExamId || examsList[0]?.examId || '';
+    const isLegacyTarget = activeExamId === legacyExamId && examsList[0]?.examId === activeExamId;
 
     const filteredResults = activeExamId
-        ? resultsData.filter(r => r.examId === activeExamId || matchesLegacyExam(r, activeExam))
+        ? resultsData.filter(r => {
+            if (r.examId) return r.examId === activeExamId;
+            return isLegacyTarget && activeExam && normalizeText(r.examName || r.testName || '') === normalizeText(activeExam.title || EXAM_NAME);
+        })
         : [];
 
     // --- Metrics ---
@@ -215,7 +204,11 @@ export default function AdminPanel({ db, resultsData, dashboardStatus, isRefresh
                             <div className="flex gap-2 items-center flex-wrap">
                                 {examsList.map((exam) => {
                                     const isActive = activeExamId === exam.examId;
-                                    const count = resultsData.filter(r => r.examId === exam.examId || matchesLegacyExam(r, exam)).length;
+                                    const count = resultsData.filter(r => {
+                                        if (r.examId) return r.examId === exam.examId;
+                                        const isPrimaryExam = exam.examId === examsList[0]?.examId;
+                                        return isPrimaryExam && normalizeText(r.examName || r.testName || '') === normalizeText(exam.title || EXAM_NAME);
+                                    }).length;
                                     return (
                                         <button
                                             key={exam.id}
