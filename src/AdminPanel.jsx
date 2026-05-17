@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs, onSnapshot, query, orderBy, where, updateDoc } from 'firebase/firestore';
+import { getApp } from 'firebase/app';
 
-const db = getFirestore();
+const db = getFirestore(getApp());
 
 export default function AdminPanel({ resultsData, dashboardStatus, isRefreshingResults, handleRefreshResults, EXAM_NAME }) {
     const [adminTab, setAdminTab] = useState('grades'); // 'grades' | 'exams' | 'create-exam'
