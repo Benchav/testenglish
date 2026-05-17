@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, getDocsFromServer } from 'firebase/firestore';
 import AdminPanel from './AdminPanel.jsx';
 
@@ -313,20 +313,19 @@ export default function App() {
         e.preventDefault();
         setErrorMsg('');
         try {
-            try {
-                await signInWithEmailAndPassword(auth, emailStr, passStr);
+            const normalizedEmail = emailStr.trim().toLowerCase();
+            const signInMethods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+
+            if (signInMethods.length > 0) {
+                await signInWithEmailAndPassword(auth, normalizedEmail, passStr);
                 return;
-            } catch (signInError) {
-                if (signInError?.code !== 'auth/user-not-found') {
-                    throw signInError;
-                }
             }
 
-            const cred = await createUserWithEmailAndPassword(auth, emailStr, passStr);
+            const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, passStr);
             await setDoc(doc(db, "usuarios", cred.user.uid), {
-                email: emailStr,
+                email: normalizedEmail,
                 rol: 'estudiante',
-                nombre: nameStr.trim() || emailStr,
+                nombre: nameStr.trim() || normalizedEmail,
                 createdAt: new Date().toISOString()
             });
         } catch (error) {
