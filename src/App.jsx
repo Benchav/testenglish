@@ -178,38 +178,50 @@ export default function App() {
         return () => unsubscribe();
     }, []);
 
+    // Load exams catalog for students
     useEffect(() => {
-        if (!user || !userRole) return;
-        
-        if (userRole === 'estudiante' && view !== 'quiz') {
-            const qRef = collection(db, 'preguntas');
-            const unsub = onSnapshot(qRef, (snapshot) => {
-                const loaded = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const correctString = data.options[data.correctIndex]; 
-                    const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
-                    const newCorrectIndex = shuffledOptions.indexOf(correctString);
+        if (!user || userRole !== 'estudiante') return;
+        const unsub = onSnapshot(collection(db, 'examenes'), (snapshot) => {
+            const exams = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            exams.sort((a, b) => (a.order || 0) - (b.order || 0));
+            setExamsList(exams);
+        });
+        return () => unsub();
+    }, [user, userRole]);
 
-                    return { 
-                        fbId: doc.id, 
-                        ...data, 
-                        options: shuffledOptions,
-                        shuffledCorrectIndex: newCorrectIndex
-                    };
-                });
-                loaded.sort((a,b) => a.id - b.id);
-                setQuestions(loaded);
+    // Load questions filtered by selected exam
+    useEffect(() => {
+        if (!user || userRole !== 'estudiante' || !selectedExamId || view === 'quiz') return;
+        const qRef = query(collection(db, 'preguntas'), where('examId', '==', selectedExamId));
+        const unsub = onSnapshot(qRef, (snapshot) => {
+            const loaded = snapshot.docs.map(doc => {
+                const data = doc.data();
+                const correctString = data.options[data.correctIndex]; 
+                const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
+                const newCorrectIndex = shuffledOptions.indexOf(correctString);
+                return { 
+                    fbId: doc.id, 
+                    ...data, 
+                    options: shuffledOptions,
+                    shuffledCorrectIndex: newCorrectIndex
+                };
             });
-            return () => unsub();
-        } else if (userRole === 'docente' && view === 'dashboard') {
-            const rRef = query(collection(db, 'calificaciones'), orderBy('timestamp', 'desc'));
-            const unsub = onSnapshot(rRef, (snapshot) => {
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setResultsData(data);
-                setDashboardStatus(`Live sync active. Last update: ${new Date().toLocaleString()}`);
-            });
-            return () => unsub();
-        }
+            loaded.sort((a,b) => a.id - b.id);
+            setQuestions(loaded);
+        });
+        return () => unsub();
+    }, [user, userRole, selectedExamId, view]);
+
+    // Dashboard listener for docente
+    useEffect(() => {
+        if (!user || userRole !== 'docente' || view !== 'dashboard') return;
+        const rRef = query(collection(db, 'calificaciones'), orderBy('timestamp', 'desc'));
+        const unsub = onSnapshot(rRef, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setResultsData(data);
+            setDashboardStatus(`Live sync active. Last update: ${new Date().toLocaleString()}`);
+        });
+        return () => unsub();
     }, [user, userRole, view]);
 
     useEffect(() => {
