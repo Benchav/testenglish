@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, getDocsFromServer } from 'firebase/firestore';
+import AdminPanel from './AdminPanel.jsx';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -423,15 +424,6 @@ export default function App() {
     // --- RENDERIZADO PRINCIPAL ---
     if (!authLoaded) return <div className="flex justify-center items-center h-screen bg-[#f4f7fe] text-[#64748b] font-medium animate-pulse">Loading Teacher Elimar Roa English Exam...</div>;
 
-    // Métricas totales globales (Para Panel Docente)
-    const totalAttempted = resultsData.length;
-    let globalAcc = 0;
-    if (totalAttempted > 0) {
-        const totalScore = resultsData.reduce((acc, curr) => acc + curr.score, 0);
-        const maxScore = resultsData.reduce((acc, curr) => acc + curr.total, 0);
-        globalAcc = ((totalScore / maxScore) * 100).toFixed(0);
-    }
-
     return (
         <div className="min-h-screen bg-[#f4f7fe] text-[#1e293b] font-sans antialiased overflow-x-hidden relative">
             
@@ -733,103 +725,15 @@ export default function App() {
                     </div>
                 )}
 
-                {/* --- MÓDULO PANEL DOCENTE (The EdTech Reference Style) --- */}
+                {/* --- MÓDULO PANEL DOCENTE --- */}
                 {view === 'dashboard' && userRole === 'docente' && (
-                    <div className="w-full -mt-20">
-                        {/* THE 3 OVERLAPPING CIRCLES FROM THE REFERENCE IMAGE */}
-                        <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] p-6 mb-8 flex justify-around items-center max-w-2xl mx-auto w-full relative z-20">
-                            <div className="flex flex-col items-center">
-                                <div className="w-20 h-20 rounded-full border-[6px] border-blue-100 flex items-center justify-center mb-3 text-2xl font-black text-slate-800 shadow-inner">
-                                    {totalAttempted > 0 ? (resultsData[0]?.score || 0) : '-'}
-                                </div>
-                                <span className="text-sm font-bold text-slate-400 capitalize">Recent Score</span>
-                            </div>
-                            <div className="w-px h-16 bg-slate-100"></div>
-                            <div className="flex flex-col items-center">
-                                <div className="w-24 h-24 rounded-full border-[8px] border-blue-500 bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center mb-3 text-3xl font-black text-white shadow-lg shadow-blue-500/40">
-                                    {totalAttempted}
-                                </div>
-                                <span className="text-[15px] font-extrabold text-slate-700 capitalize">Attempted</span>
-                            </div>
-                            <div className="w-px h-16 bg-slate-100"></div>
-                            <div className="flex flex-col items-center">
-                                <div className="w-20 h-20 rounded-full border-[6px] border-green-100 flex items-center justify-center mb-3 text-2xl font-black text-slate-800 shadow-inner relative">
-                                    {globalAcc}<span className="text-sm absolute right-1 bottom-4 text-green-500">%</span>
-                                </div>
-                                <span className="text-sm font-bold text-slate-400 capitalize">Accuracy</span>
-                            </div>
-                        </div>
-
-                        {/* LISTA DE ESTUDIANTES */}
-                        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden pt-6">
-                            <div className="px-8 mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                <h3 className="font-extrabold text-[#1e293b] text-xl">Teacher Results Overview</h3>
-                                <button
-                                    onClick={handleRefreshResults}
-                                    disabled={isRefreshingResults}
-                                    className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all border ${isRefreshingResults ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
-                                >
-                                    {isRefreshingResults ? 'Refreshing...' : 'Refresh Results'}
-                                </button>
-                            </div>
-                            <p className="px-8 text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">{dashboardStatus || 'Live sync active. Waiting for updates...'}</p>
-                            
-                            {resultsData.length === 0 ? (
-                                <div className="text-center py-20 bg-slate-50 mx-4 mb-4 rounded-3xl border border-slate-100">
-                                    <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <svg className="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                        </svg>
-                                    </div>
-                                    <p className="text-slate-500 font-bold">No exam submissions yet.</p>
-                                </div>
-                            ) : (
-                                <div className="divide-y divide-slate-100">
-                                    {resultsData.map((res) => {
-                                        const studentName = res.studentName || 'Unknown Student';
-                                        const totalQuestions = Number(res.total) || 0;
-                                        const score = Number(res.score) || 0;
-                                        const percentage = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0;
-                                        const mistakes = typeof res.incorrectAnswers === 'number' ? res.incorrectAnswers : Math.max(totalQuestions - score, 0);
-                                        const examName = res.examName || EXAM_NAME;
-                                        const completedAt = res.timestamp ? new Date(res.timestamp) : null;
-                                        return (
-                                            <div key={res.id} className="p-6 md:px-8 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                
-                                                <div className="flex items-center mb-2 md:mb-0">
-                                                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg mr-4">
-                                                        {studentName.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-extrabold text-[#1e293b] text-lg">{studentName}</h4>
-                                                        <p className="text-slate-400 text-sm font-bold">
-                                                            {completedAt ? `${completedAt.toLocaleDateString()} ${completedAt.toLocaleTimeString()}` : 'No completion date'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-col items-start md:items-end w-full md:w-auto">
-                                                    <div className="flex flex-wrap md:justify-end gap-2 mb-3">
-                                                        <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Test: {examName}</span>
-                                                        <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">Final Score: {score}/{totalQuestions}</span>
-                                                        <span className="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-100">Mistakes: {mistakes}</span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-3 mb-2">
-                                                        <span className="font-black text-2xl text-[#1e293b]">{percentage.toFixed(0)}<span className="text-lg text-slate-400">%</span></span>
-                                                    </div>
-                                                    {/* Custom Data mapping mini bar */}
-                                                    <div className="flex h-2.5 w-40 bg-slate-100 rounded-full overflow-hidden">
-                                                        <div className={`h-full ${percentage >= 80 ? 'bg-green-500' : percentage >= 50 ? 'bg-yellow-400' : 'bg-red-500'}`} style={{ width: `${percentage}%` }}></div>
-                                                    </div>
-                                                </div>
-
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <AdminPanel
+                        resultsData={resultsData}
+                        dashboardStatus={dashboardStatus}
+                        isRefreshingResults={isRefreshingResults}
+                        handleRefreshResults={handleRefreshResults}
+                        EXAM_NAME={EXAM_NAME}
+                    />
                 )}
             </div>
         </div>
