@@ -728,6 +728,7 @@ export default function App() {
                 {/* --- MÓDULO PANEL DOCENTE --- */}
                 {view === 'dashboard' && userRole === 'docente' && (
                     <AdminPanel
+                        db={db}
                         resultsData={resultsData}
                         dashboardStatus={dashboardStatus}
                         isRefreshingResults={isRefreshingResults}
