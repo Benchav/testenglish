@@ -550,10 +550,12 @@ export default function App() {
                             </div>
 
                             <form onSubmit={handleAuth} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-                                    <EdTechInput type="text" placeholder="e.g. John Doe" value={nameStr} onChange={handleNameChange} required={false} />
-                                </div>
+                                {isRegistering && (
+                                    <div className="space-y-1.5">
+                                        <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                                        <EdTechInput type="text" placeholder="e.g. John Doe" value={nameStr} onChange={handleNameChange} required />
+                                    </div>
+                                )}
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
                                     <EdTechInput type="email" placeholder="studentname@gmail.com" value={emailStr} onChange={handleEmailChange} required />
